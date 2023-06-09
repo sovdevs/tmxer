@@ -11,8 +11,7 @@ __pycache__/
 *.sublime-workspace
 
 # Virtual environments
-venv/
-env/
+.env/
 
 # Project-specific ignores
 # Add any project-specific files or directories to ignore here

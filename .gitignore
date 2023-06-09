@@ -1,0 +1,18 @@
+# Python-specific ignores
+*.pyc
+__pycache__/
+
+# macOS-specific ignores
+.DS_Store
+
+# Editors and IDEs
+.vscode/
+*.code-workspace
+*.sublime-workspace
+
+# Virtual environments
+venv/
+env/
+
+# Project-specific ignores
+# Add any project-specific files or directories to ignore here

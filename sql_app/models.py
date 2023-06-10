@@ -29,6 +29,7 @@ class TMXFile(Base):
     totalSegs = Column(Integer)
     segments = relationship("Segment", back_populates="fromFile")
     # __table_args__ = (CheckConstraint("srcWordCount>0", name="srcWrdCt_positive"),)
+    __table_args__ = (UniqueConstraint("fileName"),)
 
 
 class AcceptedDomain(Base):

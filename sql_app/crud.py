@@ -5,6 +5,7 @@ from . import models, tmx
 from uuid import UUID, uuid4
 
 
+# how to index a file?
 def create_tmxfile(tmxfile: tmx.TMXFile, db: Session):
     db_tmxfile = models.TMXFile(
         uuid_str=tmxfile.fileId,

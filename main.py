@@ -31,6 +31,35 @@ app = FastAPI()
 # db = SessionLocal()
 
 
+def add_languages(db: Session):
+    languages = ["en", "de", "ru", "fr", "ro", "en-US", "de-DE"]
+
+    accepted_languages = [AcceptedLanguage(language=lang) for lang in languages]
+
+    db.add_all(accepted_languages)
+    db.commit()
+
+
+@app.on_event("startup")
+async def startup_event(db: Session = Depends(get_db)):
+    add_languages(db)
+
+
+# def add_domains(db: Session):
+
+#     domains = [
+#         medical = "medical"
+#         legal = "legal"
+#         lw_corporate = "lw_corporate"
+#         lw_aftersales = "lw_aftersales"
+#         # Add more domains as needed
+#     ]
+
+#     accepted_domains = [AcceptedDomain(domain=dom) for dom in domains]
+
+#     db.add_all(accepted_domains)
+#     db.commit()
+
 # Dependency
 
 
@@ -169,40 +198,40 @@ async def processTMX(tmx: str, fileName: str, db: Session) -> TMXFile:
         obj2["timestamp"] = current_timestamp
 
         sg = Segment(**obj2)
-        the_segments.append(sg.__dict__)
-
-        if (i + 1) % 1000 == 0:
-            db.bulk_insert_mappings(Segment, the_segments)
-            db.commit()
-            the_segments = []
-
-    if the_segments:
-        db.bulk_insert_mappings(Segment, the_segments)
-        db.commit()
-        # store_segment(sg, db)
+        the_segments.append(sg)
         # the_units.append(sg)
-        # print(sg)
-        # print(sg)
-        #
-        # for tuv in tu.findall('.//tuv'):
-        #     lang = tuv.get('{http://www.w3.org/XML/1998/namespace}lang')
-        #     if count ==0:
-        #         obj['srcLang'] = lang
-        #         count +=1
-        #     if count ==1:
-        #         obj['tarLang'] = lang
-        #         count -=1
-        #     seg = tuv.find('seg')
-        #     if lang is not None and seg is not None:
-        #         if  count ==0:
-        #             obj['srcContent'] = seg.text
-        #             print(lang, seg.text)
-        #         elif count==1:
-        #             obj['tarContent'] = seg.text
-        #             print(lang, seg.text)
-        #         else:
-        #             obj['undefined'] = seg.text
-        #             print(lang, seg.text)
+        store_segment(sg, db)
+    #     if (i + 1) % 1000 == 0:
+    #         db.bulk_insert_mappings(Segment, the_segments)
+    #         db.commit()
+    #         the_segments = []
+
+    # if the_segments:
+    #     db.bulk_insert_mappings(Segment, the_segments)
+    #     db.commit()
+
+    # print(sg)
+    # print(sg)
+    #
+    # for tuv in tu.findall('.//tuv'):
+    #     lang = tuv.get('{http://www.w3.org/XML/1998/namespace}lang')
+    #     if count ==0:
+    #         obj['srcLang'] = lang
+    #         count +=1
+    #     if count ==1:
+    #         obj['tarLang'] = lang
+    #         count -=1
+    #     seg = tuv.find('seg')
+    #     if lang is not None and seg is not None:
+    #         if  count ==0:
+    #             obj['srcContent'] = seg.text
+    #             print(lang, seg.text)
+    #         elif count==1:
+    #             obj['tarContent'] = seg.text
+    #             print(lang, seg.text)
+    #         else:
+    #             obj['undefined'] = seg.text
+    #             print(lang, seg.text)
 
     # create
     #  update TMXFILE object

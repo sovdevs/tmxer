@@ -33,15 +33,27 @@ app = FastAPI()
 
 def add_languages(db: Session):
     languages = ["en", "de", "ru", "fr", "ro", "en-US", "de-DE"]
-
-    accepted_languages = [AcceptedLanguage(language=lang) for lang in languages]
+    existing_languages = (
+        db.query(models.AcceptedLanguage)
+        .filter(models.AcceptedLanguage.language.in_(languages))
+        .all()
+    )
+    languages_to_add = [
+        lang
+        for lang in languages
+        if lang not in [existing.language for existing in existing_languages]
+    ]
+    accepted_languages = [
+        models.AcceptedLanguage(language=lang) for lang in languages_to_add
+    ]
 
     db.add_all(accepted_languages)
     db.commit()
 
 
 @app.on_event("startup")
-async def startup_event(db: Session = Depends(get_db)):
+async def startup_event():
+    db = next(get_db())  # Assuming get_db returns an async generator next to get one
     add_languages(db)
 
 

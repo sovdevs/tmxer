@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     UniqueConstraint,
     CheckConstraint,
+    Table,
 )
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -42,6 +43,30 @@ class AcceptedDomain(Base):
         self.domain = domain
 
 
+segment_categories = Table(
+    "segment_categories",
+    Base.metadata,
+    Column(
+        "category_id", Integer, ForeignKey("accepted_categories.id"), primary_key=True
+    ),
+    Column("segment_id", String, ForeignKey("segments.segId"), primary_key=True),
+)
+
+
+class AcceptedCategory(Base):
+    __tablename__ = "accepted_categories"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    category = Column(String, unique=True)
+
+    segments = relationship(
+        "Segment", secondary=segment_categories, back_populates="categories"
+    )
+
+    def __init__(self, category):
+        self.category = category
+
+
 class AcceptedLanguage(Base):
     __tablename__ = "accepted_languages"
 
@@ -68,9 +93,12 @@ class Segment(Base):
     srcWordCount = Column(Integer)
     timestamp = Column(String)
     created_on = Column(DateTime(), default=datetime.utcnow)
-
     fromFileId = Column(String, ForeignKey("tmxfiles.uuid_str"))
     fromFile = relationship("TMXFile", back_populates="segments")
+
+    categories = relationship(
+        "AcceptedCategory", secondary=segment_categories, back_populates="segments"
+    )
 
     idx_uuid = Index("idx_segId", segId)
     idx_srcText = Index("idx_srcText", srcText)

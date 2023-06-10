@@ -31,6 +31,39 @@ app = FastAPI()
 # db = SessionLocal()
 
 
+def add_association(db: Session, category_ids: List[int], segment_id: str):
+    association_values = [
+        {"category_id": category_id, "segment_id": segment_id}
+        for category_id in category_ids
+    ]
+    db.execute(models.segment_categories.insert().values(association_values))
+    db.commit()
+
+
+def add_categories(db: Session, categories: list[str]) -> list[int]:
+    existing_categories = (
+        db.query(models.AcceptedCategory)
+        .filter(models.AcceptedCategory.category.in_(categories))
+        .all()
+    )
+    categories_to_add = [
+        cat
+        for cat in categories
+        if cat not in [existing.category for existing in existing_categories]
+    ]
+    accepted_categories = [
+        models.AcceptedCategory(category=cat) for cat in categories_to_add
+    ]
+    db.add_all(accepted_categories)
+    db.commit()
+    db.refresh(accepted_categories)
+
+    category_ids = [
+        category.id for category in existing_categories + accepted_categories
+    ]
+    return category_ids
+
+
 def add_languages(db: Session):
     languages = ["en", "de", "ru", "fr", "ro", "en-US", "de-DE"]
     existing_languages = (
@@ -115,7 +148,9 @@ def store_file(tmxfile: tmx.TMXFile, db: Session):
     return crud.create_tmxfile(db=db, tmxfile=tmxfile)
 
 
-async def processTMX(tmx: str, fileName: str, db: Session) -> TMXFile:
+async def processTMX(
+    tmx: str, categories: List[str], fileName: str, db: Session
+) -> TMXFile:
     # Parse the TMX file
     tree = ET.parse(tmx)
     root = tree.getroot()
@@ -142,6 +177,8 @@ async def processTMX(tmx: str, fileName: str, db: Session) -> TMXFile:
     obj["srcWordCount"] = 0
     obj["totalSegs"] = 0
     tmxo = TMXFile(**obj)
+    category_ids = add_categories(db, categories)
+
     res = store_file(tmxo, db)
     print(res.uuid_str)
     segCount = 0
@@ -212,7 +249,10 @@ async def processTMX(tmx: str, fileName: str, db: Session) -> TMXFile:
         sg = Segment(**obj2)
         the_segments.append(sg)
         # the_units.append(sg)
-        store_segment(sg, db)
+        segment = store_segment(sg, db)
+        # get segid
+        add_association(category_ids, segment.segId)
+
     #     if (i + 1) % 1000 == 0:
     #         db.bulk_insert_mappings(Segment, the_segments)
     #         db.commit()
@@ -291,35 +331,30 @@ def read_users(
 # def store_file(file_object:TMXFile):
 
 
-async def storeTMX(
-    clientId: str, domains: List[AcceptedDomain], file: UploadFile, db: Session
-):
+async def storeTMX(clientId: str, categories: List[str], file: UploadFile, db: Session):
     contents = await file.read()  # bytes object
     contents_str = contents.decode("utf-8")
     contents_bytes = contents_str.encode("utf-8")
     fileobj = io.BytesIO(contents_bytes)
     file_size_kb = len(contents) / (1024)
     wordCount = 0
-    # domains: List[AcceptedDomain] = []
-    # create file db here
-
     # what kind of file is it? call tjat function
     filename_without_extension = os.path.splitext(file.filename)[0]
     fileName = filename_without_extension
     file_extension = os.path.splitext(file.filename)[1]
     if file_extension == ".tmx":
         # write file to DB return ID
-        res = await processTMX(fileobj, fileName, db)
+        res = await processTMX(fileobj, categories, fileName, db)
 
 
 @app.post("/tmxs/")
 async def store_tmx(
     clientId: str,
-    domains: List[AcceptedDomain],
+    categories: List[str],
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    return await storeTMX(clientId, domains, file, db)
+    return await storeTMX(clientId, categories, file, db)
 
     # res2 = create_tmxfile(res)  # deals with already created
     # create segms res2.units

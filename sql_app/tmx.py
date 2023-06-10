@@ -27,8 +27,8 @@ class AcceptedLanguage(str, Enum):
     ru = "ru"
     fr = "fr"
     ro = "ro"
-    enUS = "en-us"
-    deDE = "de-de"
+    enUS = "en-US"
+    deDE = "de-DE"
 
     @classmethod
     def get_language_code(cls, language):

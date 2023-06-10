@@ -84,9 +84,12 @@ async def processTMX(tmx: str, fileName: str, db: Session) -> TMXFile:
     # Extract the prop targetlang text
     target_lang = root.find('.//prop[@type="targetlang"]')
     # <prop type="name">German-Germany - English-United States for BMW Group - CA-601 ISTA</prop>
-    obj["fileName"] = make_filename_friendly(
-        root.find('.//prop[@type="name"]').text
-    )  # name defDomain
+    if root.find('.//prop[@type="name"]'):
+        obj["fileName"] = make_filename_friendly(
+            root.find('.//prop[@type="name"]').text
+        )  # name defDomain
+    else:
+        obj["fileName"] = "unknown"
     obj["fileVersion"] = root.attrib.get("version")
     obj["fileEncoding"] = root.attrib.get("encoding")
     fromFileId = str(uuid4())
@@ -103,7 +106,8 @@ async def processTMX(tmx: str, fileName: str, db: Session) -> TMXFile:
     segCount = 0
     srcWordCount = 0
     pattern = re.compile(r"\w+")
-    for tu in root.findall(".//tu"):
+    the_segments = []
+    for i, tu in enumerate(root.findall(".//tu")):
         obj2 = {}
         segWordCount = 0
         src_lang = tu.find("./tuv[1]").attrib[
@@ -165,7 +169,17 @@ async def processTMX(tmx: str, fileName: str, db: Session) -> TMXFile:
         obj2["timestamp"] = current_timestamp
 
         sg = Segment(**obj2)
-        store_segment(sg, db)
+        the_segments.append(sg.__dict__)
+
+        if (i + 1) % 1000 == 0:
+            db.bulk_insert_mappings(Segment, the_segments)
+            db.commit()
+            the_segments = []
+
+    if the_segments:
+        db.bulk_insert_mappings(Segment, the_segments)
+        db.commit()
+        # store_segment(sg, db)
         # the_units.append(sg)
         # print(sg)
         # print(sg)
@@ -192,8 +206,11 @@ async def processTMX(tmx: str, fileName: str, db: Session) -> TMXFile:
 
     # create
     #  update TMXFILE object
-    obj["srcWordCount"] = srcWordCount
-    obj["totalSegs"] = segCount
+    the_tmx_file_obj = db.query(TMXFile).filter_by(uuid_str=res.uuid_str).first()
+    if the_tmx_file_obj:
+        the_tmx_file_obj["srcWordCount"] = srcWordCount
+        the_tmx_file_obj["totalSegs"] = segCount
+        db.commit()
     # create file object in DB
 
     # add fileObject UUID to each segment

@@ -2,37 +2,84 @@ from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import text
 from . import models, tmx
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5, NAMESPACE_DNS
+from datetime import datetime, timezone
+
+"""
+UUIDS for bothSegmentsand Files
+"""
 
 
-# how to index a file?
-def create_tmxfile(tmxfile: tmx.TMXFile, db: Session):
+def generate_uuid(file_name: str) -> str:
+    # Get the current timestamp
+    current_time = datetime.now()
+
+    # Concatenate the file name and timestamp as a string
+    input_string = f"{file_name}{current_time}"
+
+    # Generate a UUID from the input string
+    generated_uuid = uuid5(NAMESPACE_DNS, input_string)
+
+    # Return the UUID as a string
+    return str(generated_uuid)
+
+
+"""
+TMX FILE
+"""
+
+
+def update_tmxfile_with_segment_info(tmxfile: tmx.TMXFile, db: Session):
+    db_tmxfile = get_tmxfile_by_uuid(db, uuid_str=tmxfile.fileId)
     db_tmxfile = models.TMXFile(
-        uuid_str=tmxfile.fileId,
-        fileVersion=tmxfile.fileVersion,
-        fileName=tmxfile.fileName,
-        dateAdded=tmxfile.dateAdded,
         srcWordCount=tmxfile.srcWordCount,
         totalSegs=tmxfile.totalSegs,
     )
-    print(db_tmxfile.uuid_str)
-    db.add(db_tmxfile)
     db.commit()
-    db.refresh(db_tmxfile)
-    print(db_tmxfile.uuid_str)
-    return db_tmxfile
+    return db_tmxfile.uuid_str
+
+
+def create_or_update_tmxfile(tmxfile: tmx.TMXFile, db: Session):
+    db_tmxfile = (
+        db.query(models.TMXFile)
+        .filter(
+            models.TMXFile.fileName == tmxfile.fileName,
+            models.TMXFile.clientId == tmxfile.clientId,
+        )
+        .first()
+    )
+    if db_tmxfile:
+        # update instead
+        db_tmxfile.dateUpdated = (datetime.now(timezone.utc),)
+        db_tmxfile.srcWordCount = tmxfile.srcWordCount
+        db_tmxfile.totalSegs = tmxfile.totalSegs
+        db.commit()
+    else:
+        # new has no segment info yet
+        db_tmxfile = models.TMXFile(
+            uuid_str=generate_uuid(tmxfile.fileName),
+            fileVersion=tmxfile.fileVersion,
+            fileName=tmxfile.fileName,
+            clientId=tmxfile.clientId,
+            dateAdded=datetime.now(timezone.utc),
+            dateUpdated=datetime.now(timezone.utc),
+        )
+        db.add(db_tmxfile)
+        db.commit()
+        db.refresh(db_tmxfile)
+    return db_tmxfile.uuid_str
 
 
 def get_tmxfile_by_uuid(db: Session, uuid_str: str):
-    return db.query(models.TMXFile).filter(models.TMXFile.uuid_str == uuid_str).first()
-
-
-# def get_tmxfile_by_uuid(db: Session, uuid_str: str):
-#     uuid_value = UUID(uuid_str)
-#     hex_value = str(uuid_value)
-#     hex_value = hex_value.replace("urn:", "").replace("uuid:", "")
-#     return db.query(models.TMXFile).filter(models.TMXFile.uuid == hex_value).first()
+    res = db.query(models.TMXFile).filter(models.TMXFile.uuid_str == uuid_str).first()
+    print(uuid_str, res)
+    return res
 
 
 def get_tmxfiles(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.TMXFile).offset(skip).limit(limit).all()
+
+
+"""
+SEGMENT
+"""

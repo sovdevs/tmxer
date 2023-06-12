@@ -6,19 +6,19 @@ from datetime import date, datetime
 
 # Now create Pydantic models (schemas) that will be used when reading data, when returning it from the API.
 ## should have API to clean up TMX ie remove duplocates remove EASY low informational content segments
-class AcceptedDomain(str, Enum):
-    medical = "medical"
-    legal = "legal"
-    lw_corporate = "lw_corporate"
-    lw_aftersales = "lw_aftersales"
+# class AcceptedDomain(str, Enum):
+#     medical = "medical"
+#     legal = "legal"
+#     lw_corporate = "lw_corporate"
+#     lw_aftersales = "lw_aftersales"
 
 
-class FileType(str, Enum):
-    tmx = "tmx"
-    xliff = "xliff"
-    sdlxliff = "sdlxliff"
-    csv = "csv"
-    po = "po"
+# class FileType(str, Enum):
+#     tmx = "tmx"
+#     xliff = "xliff"
+#     sdlxliff = "sdlxliff"
+#     csv = "csv"
+#     po = "po"
 
 
 class AcceptedLanguage(str, Enum):
@@ -28,6 +28,7 @@ class AcceptedLanguage(str, Enum):
     fr = "fr"
     ro = "ro"
     enUS = "en-US"
+    enGB = "en-GB"
     deDE = "de-DE"
 
     @classmethod
@@ -42,7 +43,7 @@ class Segment(BaseModel):
     fromFileId: str
     segId: str
     seqNo: int
-    domains: List[AcceptedDomain] = []
+    categories: List[str] = []
     srcLang: AcceptedLanguage
     trgLang: AcceptedLanguage
     srcText: str  # indexed?
@@ -63,6 +64,7 @@ class Segment(BaseModel):
 # create first then
 class TMXFile(BaseModel):
     fileId: str
+    clientId: str
     fileVersion: str = "1.4"
     fileName: str
     dateAdded: datetime

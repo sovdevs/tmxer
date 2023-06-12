@@ -25,12 +25,14 @@ class TMXFile(Base):
     uuid_str = Column(String, primary_key=True, index=True)
     fileVersion = Column(String, default="1.4")
     fileName = Column(String)
-    dateAdded = Column(DateTime, default=datetime.utcnow)
+    clientId = Column(String)
+    dateAdded = Column(DateTime)
+    dateUpdated = Column(DateTime)
     srcWordCount = Column(Integer)
     totalSegs = Column(Integer)
     segments = relationship("Segment", back_populates="fromFile")
     # __table_args__ = (CheckConstraint("srcWordCount>0", name="srcWrdCt_positive"),)
-    __table_args__ = (UniqueConstraint("fileName"),)
+    __table_args__ = (UniqueConstraint("fileName", "clientId"),)
 
 
 class AcceptedDomain(Base):

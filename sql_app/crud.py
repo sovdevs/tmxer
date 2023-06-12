@@ -81,5 +81,38 @@ def get_tmxfiles(db: Session, skip: int = 0, limit: int = 100):
 
 
 """
+CATEGORIES
+"""
+
+
+def create_categories(db: Session, categories: list[str]):
+    existing_categories = (
+        db.query(models.AcceptedCategory)
+        .filter(models.AcceptedCategory.category.in_(categories))
+        .all()
+    )
+    print(f"existing> {existing_categories}")
+    categories_to_add = [
+        cat
+        for cat in categories
+        if cat not in [existing.category for existing in existing_categories]
+    ]
+
+    accepted_categories = [
+        models.AcceptedCategory(category=cat) for cat in categories_to_add
+    ]
+    print(f" accepted_categories > { accepted_categories }")
+    db.add_all(accepted_categories)
+    db.commit()
+    # db.refresh(accepted_categories)
+
+    category_ids = [
+        category.id for category in existing_categories + accepted_categories
+    ]
+    print(f" newly accepted_category ids > { category_ids}")
+    return category_ids
+
+
+"""
 SEGMENT
 """

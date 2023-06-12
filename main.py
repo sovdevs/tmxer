@@ -41,31 +41,6 @@ def add_association(db: Session, category_ids: List[int], segment_id: str):
     db.commit()
 
 
-def add_categories(db: Session, categories: list[str]) -> list[int]:
-    existing_categories = (
-        db.query(models.AcceptedCategory)
-        .filter(models.AcceptedCategory.category.in_(categories))
-        .all()
-    )
-    print(existing_categories)
-    # categories_to_add = [
-    #     cat
-    #     for cat in categories
-    #     if cat not in [existing.category for existing in existing_categories]
-    # ]
-    # accepted_categories = [
-    #     models.AcceptedCategory(category=cat) for cat in categories_to_add
-    # ]
-    # db.add_all(accepted_categories)
-    # db.commit()
-    # db.refresh(accepted_categories)
-
-    # category_ids = [
-    #     category.id for category in existing_categories + accepted_categories
-    # ]
-    # return category_ids
-
-
 def add_languages(db: Session):
     languages = ["en", "de", "ru", "fr", "ro"]
     existing_languages = (
@@ -186,7 +161,12 @@ async def processTMX(
     print(tmxfile)
     file_id = crud.create_or_update_tmxfile(db=db, tmxfile=tmxfile)
     print(file_id)
-    # category_ids = add_categories(db, categories)
+    category_ids = crud.create_categories(db=db, categories=categories)
+    print(f" newly accepted_category ids > { category_ids}")
+
+    """
+    todo remodel Segment, update SegmentCategory table 
+    """
 
     segCount = 0
     srcWordCount = 0
@@ -241,7 +221,7 @@ async def processTMX(
 
         ## create Segment
         obj2["fromFileId"] = file_id
-        obj2["segId"] = str(uuid4())
+        obj2["segId"] = ""
         obj2["seqNo"] = segCount
         # print(f"src_lang={src_lang}, src_count={segWordCount}, tar_lang={tar_lang}, src_text={src_text}, tar_text={tar_text}")
         obj2["srcLang"] = src_lang
@@ -253,8 +233,9 @@ async def processTMX(
         obj2["cleanSrcText"] = clean_src_text
         obj2["cleanTrgText"] = clean_trg_text
         obj2["timestamp"] = current_timestamp
-        # sg = Segment(**obj2)
+        sg = Segment(**obj2)
         # the_segments.append(sg)
+        # MIRROR FILETMX
         # segment = store_segment(sg, db)
         # add_association(category_ids, segment.segId)
 
